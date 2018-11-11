@@ -1,0 +1,23 @@
+{
+  "name": "blockchain-private-blockchain",
+  "version": "1.0.0",
+  "description": "A private blockchain",
+  "main": "levelSandbox.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/axelgalicia/blockchain-private-blockchain.git"
+  },
+  "author": "Axel Galicia",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/axelgalicia/blockchain-private-blockchain/issues"
+  },
+  "homepage": "https://github.com/axelgalicia/blockchain-private-blockchain#readme",
+  "dependencies": {
+    "crypto-js": "^3.1.9-1",
+    "level": "^4.0.0"
+  }
+}
