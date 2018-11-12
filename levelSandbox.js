@@ -44,6 +44,24 @@ class Storage {
 
   }
 
+    // Get count of elements from db
+    async length() {
+      let self = this;
+      let i = 0;
+      return new Promise((resolve, reject) => {
+        this.db.createReadStream().on('data', function (data) {
+          i++;
+        }).on('error', function (err) {
+          console.log('Unable to read data stream!', err);
+          reject(err);
+        }).on('close', function () {
+          resolve(i);
+        });
+  
+      });
+  
+    }
+
 
   // Prints all data in the db
   async printAllData() {
@@ -88,14 +106,21 @@ class TestStorage {
     let self = this;
     let promise = await self.db.printAllData();
   }
+
+    //Reads all the storage db and returns cound of elements
+    async length() {
+      let self = this;
+      return self.db.length();
+    }
 }
 
 //IIFE that inserts i elements and then print them
 (async function (i) {
   let testStorage = new TestStorage('./testchain');
   await testStorage.insert(i);
-  console.log('Printing chain:')
-  testStorage.printAll();
+  console.log('Printing chain:');
+  await testStorage.printAll();
+  console.log('Length: ' + await testStorage.length());
 })(10);
 
 
