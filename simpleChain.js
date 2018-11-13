@@ -27,10 +27,7 @@ class Blockchain {
   constructor() {
     levelDB.length().then(length => {
       if (length === 0) {
-        console.log('Creating genesis');
-        this.addBlock(this.createGenesisBlock()).catch(err => {
-          console.log(err);
-        });
+        levelDB.addLevelDBData(0, this.getBlockAsString(this.createGenesisBlock()));
       }
     }).catch(err => {
       console.log(err);
@@ -58,32 +55,36 @@ class Blockchain {
   }
 
   // Add new block
-  async addBlock(newBlock) {
+  addBlock(newBlock) {
+    return new Promise((resolve, reject) => {
+      // Verify genesis block exists
+      this.getBlockHeight().then(height => {
+        console.log(`Length: ${height}`);
+        if (height === 0) {
+          console.log('ADDING GENESIS FROM ADDBLOCK');
+          levelDB.addLevelDBData(0, this.getBlockAsString(newBlock));
+        } 
+          // Block height
+          newBlock.height = height;
+          // UTC timestamp
+          newBlock.time = this.getTimeUTC();
+          // previous block hash
+          if (height > 0) {
+            let previousBlock = async () =>{ await levelDB.getLevelDBData(height -1) };
+            console.log('PREVIOUS');
+            console.log(previousBlock);
+            newBlock.previousBlockHash = previousBlock.hash;
+          }
 
-    //Verify genesis block exists
-    let chainLength = await this.getBlockHeight().catch((err) => {
-      console.log(err);
-      chainLength = 0;
+          //console.log('Nuevo bloque:', newBlock);
+          // Block hash with SHA256 using newBlock and converting to a string
+          newBlock.hash = this.generateHash(newBlock);
+          // Adding block object to chain
+          levelDB.addLevelDBData(height + 1, this.getBlockAsString(newBlock));
+          resolve(newBlock);
+      });
+
     });
-    if (chainLength === 0) {
-      console.log('----------------');
-      //await this.addBlock(this.createGenesisBlock());
-    }
-
-    console.log(`Length: ${chainLength}`)
-    // Block height
-    newBlock.height = chainLength;
-    // UTC timestamp
-    newBlock.time = this.getTimeUTC();
-    // previous block hash
-    if (chainLength > 0) {
-      let previousBlock = levelDB.getLevelDBData(chainLength);
-      newBlock.previousBlockHash = previousBlock.hash;
-    }
-    // Block hash with SHA256 using newBlock and converting to a string
-    newBlock.hash = this.generateHash(newBlock);
-    // Adding block object to chain
-    levelDB.addLevelDBData(chainLength + 1, this.getBlockAsString(newBlock));
   }
 
   getBlockAsString(block) {
@@ -91,8 +92,8 @@ class Blockchain {
   }
 
   // Get block height
-  async getBlockHeight() {
-    return await levelDB.length();
+  getBlockHeight() {
+    return levelDB.length();
   }
 
   // get block

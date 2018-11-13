@@ -18,14 +18,20 @@ class Storage {
 
   // Get data from levelDB with key
   getLevelDBData(key) {
-    this.db.get(key, function (err, value) {
-      if (err) return console.log('Not found!', err);
-      console.log('Value = ' + value);
-    })
+    return new Promise((resolve, reject) => {
+      this.db.get(key, function (err, value) {
+        if (err) {
+             console.log('Not found!', err);
+             reject();
+           };
+        resolve(value);
+        console.log('Value = ' + value);
+      })
+    });
   }
 
   // Add data to levelDB with value
-  async addDataToLevelDB(value) {
+ addDataToLevelDB(value) {
     let self = this;
     let i = 0;
     return new Promise((resolve, reject) => {
@@ -64,7 +70,7 @@ class Storage {
 
 
   // Prints all data in the db
-  async printAllData() {
+  printAllData() {
     let self = this;
     let i = 0;
     return new Promise((resolve, reject) => {
@@ -82,49 +88,7 @@ class Storage {
 
   }
 
-
 }
-
-
-/* ===== Test class for Storage ===================================*/
-class TestStorage {
-
-  constructor(locationTest) {
-    this.db = new Storage(locationTest);
-  }
-
-  // Insert i items into the storage using i as a key
-  async insert(i) {
-    let self = this;
-    for (let z = 0; z < i; z++) {
-      let promise = await self.db.addDataToLevelDB(`Testing data ${z}`);
-      console.log(promise);
-    }
-  }
-  // Reads all the storage db and print all the values
-  async printAll() {
-    let self = this;
-    let promise = await self.db.printAllData();
-  }
-
-    // Reads all the storage db and returns cound of elements
-  async length() {
-    let self = this;
-    return self.db.length();
-  }
-}
-
-// IIFE that inserts i elements and then print them
-// Uncomment to test
-/*
-(async function (i) {
-  let testStorage = new TestStorage('./testchain');
-  await testStorage.insert(i);
-  console.log('Printing chain:');
-  await testStorage.printAll();
-  console.log('Length: ' + await testStorage.length());
-})(10);*/
-
 
 module.exports = {
   Storage
