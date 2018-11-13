@@ -11,8 +11,14 @@ class Storage {
   }
   // Add data to levelDB with key/value pair
   addLevelDBData(key, value) {
-    this.db.put(key, value, function (err) {
-      if (err) return console.log('Block ' + key + ' submission failed', err);
+    return new Promise((resolve, reject) => {
+      this.db.put(key, value, function (err) {
+        if (err) { 
+          console.log('Block ' + key + ' submission failed', err);
+          reject(err);
+        }
+        resolve(value);
+      });
     });
   }
 
@@ -25,7 +31,7 @@ class Storage {
              reject();
            };
         resolve(value);
-        console.log('Value = ' + value);
+        //console.log('Value = ' + value);
       })
     });
   }

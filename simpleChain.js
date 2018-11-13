@@ -11,7 +11,7 @@ const levelDB = new (require('./levelSandbox')).Storage('./privatechain');
 
 class Block {
   constructor(data) {
-      this.hash = "",
+    this.hash = "",
       this.height = 0,
       this.body = data,
       this.time = 0,
@@ -27,7 +27,9 @@ class Blockchain {
   constructor() {
     levelDB.length().then(length => {
       if (length === 0) {
-        levelDB.addLevelDBData(0, this.getBlockAsString(this.createGenesisBlock()));
+        levelDB.addLevelDBData(0, this.getBlockAsString(this.createGenesisBlock())).then((b) => {
+          console.log('Genesis block created');
+        });
       }
     }).catch(err => {
       console.log(err);
@@ -58,30 +60,30 @@ class Blockchain {
   addBlock(newBlock) {
     return new Promise((resolve, reject) => {
       // Verify genesis block exists
-      this.getBlockHeight().then(height => {
-        console.log(`Length: ${height}`);
-        if (height === 0) {
+      this.getBlockHeight().then(currentHeight => {
+        if (currentHeight === 0) {
           console.log('ADDING GENESIS FROM ADDBLOCK');
-          levelDB.addLevelDBData(0, this.getBlockAsString(newBlock));
-        } 
-          // Block height
-          newBlock.height = height;
-          // UTC timestamp
-          newBlock.time = this.getTimeUTC();
-          // previous block hash
-          if (height > 0) {
-            let previousBlock = async () =>{ await levelDB.getLevelDBData(height -1) };
-            console.log('PREVIOUS');
-            console.log(previousBlock);
-            newBlock.previousBlockHash = previousBlock.hash;
-          }
-
-          //console.log('Nuevo bloque:', newBlock);
+          (async () => { await levelDB.addLevelDBData(0, this.getBlockAsString(newBlock)) })();
+        }
+        // Block height
+        newBlock.height = currentHeight;
+        // UTC timestamp
+        newBlock.time = this.getTimeUTC();
+        // previous block hash
+        (async () => {
+          let previousBlock = await levelDB.getLevelDBData(currentHeight - 1);
+          // Assign previous block hash
+          newBlock.previousBlockHash = this.getBlockFromString(previousBlock).hash;
           // Block hash with SHA256 using newBlock and converting to a string
           newBlock.hash = this.generateHash(newBlock);
           // Adding block object to chain
-          levelDB.addLevelDBData(height + 1, this.getBlockAsString(newBlock));
-          resolve(newBlock);
+          levelDB.addLevelDBData(currentHeight, this.getBlockAsString(newBlock)).then(block => {
+            resolve(block);
+          }).catch(err => {
+            reject(err);
+          });
+
+        })();
       });
 
     });
@@ -89,6 +91,10 @@ class Blockchain {
 
   getBlockAsString(block) {
     return JSON.stringify(block);
+  }
+
+  getBlockFromString(block) {
+    return JSON.parse(block);
   }
 
   // Get block height
@@ -143,3 +149,24 @@ class Blockchain {
     }
   }
 }
+
+
+function start() {
+  let b = new Blockchain();
+  let count = 0;
+  (function (n) {
+    let it = setInterval(() => {
+      b.addBlock(new Block(`Block #${count + 1}`)).then(b => {
+        console.log(b);
+        count++;
+        if (count >= n) {
+          clearInterval(it);
+        }
+      });
+
+    }, 100);
+  })(10);
+}
+
+// Inserts the Genesis block and 10 more blocks
+start();
