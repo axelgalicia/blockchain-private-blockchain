@@ -3,9 +3,7 @@
 |  =========================================================*/
 
 const SHA256 = require('crypto-js/sha256');
-import { Store } from './levelSandbox';
-
-
+const levelDB = new (require('./levelSandbox')).Storage('./privatechain');
 
 /* ===== Block Class ==============================
 |  Class with a constructor for block 			   |
@@ -13,7 +11,7 @@ import { Store } from './levelSandbox';
 
 class Block {
   constructor(data) {
-    this.hash = "",
+      this.hash = "",
       this.height = 0,
       this.body = data,
       this.time = 0,
@@ -26,25 +24,35 @@ class Block {
 |  ================================================*/
 
 class Blockchain {
-  constructor(dataLocation) {
-    this.chain = new Store(dataLocation);
-    this.addBlock(createGenesisBlock());
+  constructor() {
+    levelDB.length().then(length => {
+      if (length === 0) {
+        console.log('Creating genesis');
+        this.addBlock(this.createGenesisBlock()).catch(err => {
+          console.log(err);
+        });
+      }
+    }).catch(err => {
+      console.log(err);
+    });
   }
+
 
   //Returns a new Block which will be used as Genesis block
   createGenesisBlock() {
     const genesisBlock = new Block('First block in the chain');
     genesisBlock.height = 0;
-    genesisBlock.time = getTimeUTC();
-    genesisBlock.hash = generateHash(genesisBlock);
+    genesisBlock.time = this.getTimeUTC();
+    genesisBlock.hash = this.generateHash(genesisBlock);
     return genesisBlock;
   }
 
-  //Returns the SHA256 of the block passed
+  // Returns the SHA256 of the block passed
   generateHash(block) {
     return SHA256(JSON.stringify(block)).toString();
   }
 
+  // Returns the current timestamp in the UTC format
   getTimeUTC() {
     return new Date().getTime().toString().slice(0, -3);
   }
@@ -53,33 +61,45 @@ class Blockchain {
   async addBlock(newBlock) {
 
     //Verify genesis block exists
-    const chainLength = await this.chain.length();
-    if(chainLength < 1 ) {
-      await this.chain.addBlock(0, createGenesisBlock());
+    let chainLength = await this.getBlockHeight().catch((err) => {
+      console.log(err);
+      chainLength = 0;
+    });
+    if (chainLength === 0) {
+      console.log('----------------');
+      //await this.addBlock(this.createGenesisBlock());
     }
+
+    console.log(`Length: ${chainLength}`)
     // Block height
-    newBlock.height = await this.chain.length();
+    newBlock.height = chainLength;
     // UTC timestamp
-    newBlock.time =getTimeUTC();
+    newBlock.time = this.getTimeUTC();
     // previous block hash
-    if (this.chain.length > 0) {
-      newBlock.previousBlockHash = this.chain[this.chain.length - 1].hash;
+    if (chainLength > 0) {
+      let previousBlock = levelDB.getLevelDBData(chainLength);
+      newBlock.previousBlockHash = previousBlock.hash;
     }
     // Block hash with SHA256 using newBlock and converting to a string
-    newBlock.hash = generateHash(newBlock);
+    newBlock.hash = this.generateHash(newBlock);
     // Adding block object to chain
-    this.chain.push(newBlock);
+    levelDB.addLevelDBData(chainLength + 1, this.getBlockAsString(newBlock));
+  }
+
+  getBlockAsString(block) {
+    return JSON.stringify(block);
   }
 
   // Get block height
-  getBlockHeight() {
-    return this.chain.length - 1;
+  async getBlockHeight() {
+    return await levelDB.length();
   }
 
   // get block
   getBlock(blockHeight) {
+    let block = levelDB.getLevelDBData(blockHeight);
     // return object as a single string
-    return JSON.parse(JSON.stringify(this.chain[blockHeight]));
+    return JSON.parse(JSON.stringify(block));
   }
 
   // validate block

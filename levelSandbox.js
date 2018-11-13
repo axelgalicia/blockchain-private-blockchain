@@ -45,7 +45,7 @@ class Storage {
   }
 
     // Get count of elements from db
-    async length() {
+    length() {
       let self = this;
       let i = 0;
       return new Promise((resolve, reject) => {
@@ -93,7 +93,7 @@ class TestStorage {
     this.db = new Storage(locationTest);
   }
 
-  //Insert i items into the storage using i as a key
+  // Insert i items into the storage using i as a key
   async insert(i) {
     let self = this;
     for (let z = 0; z < i; z++) {
@@ -101,27 +101,29 @@ class TestStorage {
       console.log(promise);
     }
   }
-  //Reads all the storage db and print all the values
+  // Reads all the storage db and print all the values
   async printAll() {
     let self = this;
     let promise = await self.db.printAllData();
   }
 
-    //Reads all the storage db and returns cound of elements
-    async length() {
-      let self = this;
-      return self.db.length();
-    }
+    // Reads all the storage db and returns cound of elements
+  async length() {
+    let self = this;
+    return self.db.length();
+  }
 }
 
-//IIFE that inserts i elements and then print them
+// IIFE that inserts i elements and then print them
+// Uncomment to test
+/*
 (async function (i) {
   let testStorage = new TestStorage('./testchain');
   await testStorage.insert(i);
   console.log('Printing chain:');
   await testStorage.printAll();
   console.log('Length: ' + await testStorage.length());
-})(10);
+})(10);*/
 
 
 module.exports = {
