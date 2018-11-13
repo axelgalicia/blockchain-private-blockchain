@@ -104,28 +104,33 @@ class Blockchain {
 
   // get block
   getBlock(blockHeight) {
-    let block = levelDB.getLevelDBData(blockHeight);
-    // return object as a single string
-    return JSON.parse(JSON.stringify(block));
+   return levelDB.getLevelDBData(blockHeight);
   }
 
   // validate block
   validateBlock(blockHeight) {
-    // get block object
-    let block = this.getBlock(blockHeight);
-    // get block hash
-    let blockHash = block.hash;
-    // remove block hash to test block integrity
-    block.hash = '';
-    // generate block hash
-    let validBlockHash = SHA256(JSON.stringify(block)).toString();
-    // Compare
-    if (blockHash === validBlockHash) {
-      return true;
-    } else {
-      console.log('Block #' + blockHeight + ' invalid hash:\n' + blockHash + '<>' + validBlockHash);
-      return false;
-    }
+
+    return new Promise((resolve, reject) => {
+        // get block object
+        this.getBlock(blockHeight).then(block => {
+              let blockObject = this.getBlockFromString(block);
+              // get block hash
+              let blockHash = blockObject.hash;
+              // remove block hash to test block integrity
+              blockObject.hash = '';
+              // generate block hash
+              let validBlockHash = SHA256(JSON.stringify(blockObject)).toString();
+              // Compare
+              if (blockHash === validBlockHash) {
+                resolve(true);
+              } else {
+                console.log('Block #' + blockHeight + ' invalid hash:\n' + blockHash + '<>' + validBlockHash);
+                reject(blockHeight);
+              }
+        });
+    });
+    
+    
   }
 
   // Validate blockchain
@@ -155,17 +160,24 @@ function start() {
   let b = new Blockchain();
   let count = 0;
   (function (n) {
-    let it = setInterval(() => {
-      b.addBlock(new Block(`Block #${count + 1}`)).then(b => {
-        console.log(b);
-        count++;
-        if (count >= n) {
-          clearInterval(it);
-        }
-      });
-
-    }, 100);
-  })(10);
+    return new Promise((resolve,reject) => {
+      let it = setInterval(() => {
+        b.addBlock(new Block(`Block #${count + 1}`)).then(b => {
+          console.log(b);
+          count++;
+          if (count >= n) {
+            clearInterval(it);
+            resolve();
+          }
+        });
+  
+      }, 100);
+    });
+  })(10).then(() =>{
+     b.validateBlock(10).then(r => {
+       console.log(r);
+     });
+  });
 }
 
 // Inserts the Genesis block and 10 more blocks
