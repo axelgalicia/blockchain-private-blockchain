@@ -122,7 +122,7 @@ class Blockchain {
               let validBlockHash = SHA256(JSON.stringify(blockObject)).toString();
               // Compare
               if (blockHash === validBlockHash) {
-                resolve(true);
+                resolve(blockHeight);
               } else {
                 console.log('Block #' + blockHeight + ' invalid hash:\n' + blockHash + '<>' + validBlockHash);
                 reject(blockHeight);
@@ -153,6 +153,21 @@ class Blockchain {
       console.log('No errors detected');
     }
   }
+
+  
+  getValidatePromises() {
+    return new Promise((resolve, reject) => {
+      this.getBlockHeight().then(async height =>{
+        let promises = [];
+        console.log(height -1);
+        for(let z = 0; z < height - 1 ; z ++) {
+          let promise = await this.validateBlock(height - 1);
+            promises.push(promise);
+        }
+        resolve(promises);
+      });
+    });
+  }
 }
 
 
@@ -174,8 +189,11 @@ function start() {
       }, 100);
     });
   })(10).then(() =>{
-     b.validateBlock(10).then(r => {
-       console.log(r);
+     b.getValidatePromises().then(promises => {
+       console.log(promises);
+       Promise.all(promises).then(results => {
+         console.log(results);
+       });
      });
   });
 }
