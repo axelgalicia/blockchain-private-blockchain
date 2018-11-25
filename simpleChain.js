@@ -11,7 +11,7 @@ const levelDB = new (require('./levelSandbox')).Storage('./privatechain');
 
 class Block {
   constructor(data) {
-    this.hash = "",
+      this.hash = "",
       this.height = 0,
       this.body = data,
       this.time = 0,
