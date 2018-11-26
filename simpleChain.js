@@ -183,7 +183,7 @@ function start() {
   (function (n) {
     return new Promise((resolve, reject) => {
       let it = setInterval(() => {
-        b.addBlock(new Block(`Block #${count + 1}`)).then(b => {
+        b.addBlock(new Block(`This is a block created at ${new Date().getTime().toString().slice(0, -3)}`)).then(b => {
           console.log(b);
           count++;
           if (count >= n) {
