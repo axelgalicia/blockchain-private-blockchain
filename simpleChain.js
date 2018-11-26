@@ -11,7 +11,7 @@ const levelDB = new (require('./levelSandbox')).Storage('./privatechain');
 
 class Block {
   constructor(data) {
-      this.hash = "",
+    this.hash = "",
       this.height = 0,
       this.body = data,
       this.time = 0,
@@ -27,7 +27,8 @@ class Blockchain {
   constructor() {
     levelDB.length().then(length => {
       if (length === 0) {
-        levelDB.addLevelDBData(0, this.getBlockAsString(this.createGenesisBlock())).then((b) => {
+        const genesisBlock = this.getBlockAsString(this.createGenesisBlock());
+        levelDB.addLevelDBData(0, genesisBlock).then((b) => {
           console.log('Genesis block created');
         });
       }
@@ -88,11 +89,11 @@ class Blockchain {
 
     });
   }
-
+  // Converts the block object to string
   getBlockAsString(block) {
     return JSON.stringify(block);
   }
-
+  // Converts the block string to object
   getBlockFromString(block) {
     return JSON.parse(block);
   }
@@ -104,78 +105,83 @@ class Blockchain {
 
   // get block
   getBlock(blockHeight) {
-   return levelDB.getLevelDBData(blockHeight);
+    return levelDB.getLevelDBData(blockHeight);
   }
 
-  // validate block
-  validateBlock(blockHeight) {
-
-    return new Promise((resolve, reject) => {
-        // get block object
-        this.getBlock(blockHeight).then(block => {
-              let blockObject = this.getBlockFromString(block);
-              // get block hash
-              let blockHash = blockObject.hash;
-              // remove block hash to test block integrity
-              blockObject.hash = '';
-              // generate block hash
-              let validBlockHash = SHA256(JSON.stringify(blockObject)).toString();
-              // Compare
-              if (blockHash === validBlockHash) {
-                resolve(blockHeight);
-              } else {
-                console.log('Block #' + blockHeight + ' invalid hash:\n' + blockHash + '<>' + validBlockHash);
-                reject(blockHeight);
-              }
-        });
-    });
-    
-    
-  }
-
-  // Validate blockchain
-  validateChain() {
-    let errorLog = [];
-    for (var i = 0; i < this.chain.length - 1; i++) {
-      // validate block
-      if (!this.validateBlock(i)) errorLog.push(i);
-      // compare blocks hash link
-      let blockHash = this.chain[i].hash;
-      let previousHash = this.chain[i + 1].previousBlockHash;
-      if (blockHash !== previousHash) {
-        errorLog.push(i);
-      }
+  // validate block - Returns the block heigh if the block is not valid
+  async validateBlock(blockHeight) {
+    // get block object
+    const blockString = await this.getBlock(blockHeight);
+    const blockObject = this.getBlockFromString(blockString);
+    const validIntegrity = await this.validateBlockIntegrity(blockObject);
+    if (validIntegrity !== true) {
+      return blockHeight;
     }
-    if (errorLog.length > 0) {
-      console.log('Block errors = ' + errorLog.length);
-      console.log('Blocks: ' + errorLog);
+    const validHashLink = await this.validateBlockHashLink(blockObject);
+    return validHashLink;
+  }
+
+  // Validates block integrity
+  async validateBlockIntegrity(block) {
+    // get block hash
+    let blockHash = block.hash;
+    // remove block hash to test block integrity
+    block.hash = '';
+    // generate block hash
+    let validBlockHash = SHA256(JSON.stringify(block)).toString();
+    // Compare
+    if (blockHash === validBlockHash) {
+      block.hash = blockHash;
+      return true;
     } else {
-      console.log('No errors detected');
+      console.log('Block #' + blockHeight + ' invalid hash:\n' + blockHash + '<>' + validBlockHash);
+      return blockHeight;
     }
   }
-
-  
-  getValidatePromises() {
-    return new Promise((resolve, reject) => {
-      this.getBlockHeight().then(async height =>{
-        let promises = [];
-        console.log(height -1);
-        for(let z = 0; z < height - 1 ; z ++) {
-          let promise = await this.validateBlock(height - 1);
-            promises.push(promise);
-        }
-        resolve(promises);
-      });
-    });
+  // Validate hash link
+  validateBlockHashLink(block) {
+    return this.getBlock(block.height + 1)
+      .then(nextBlock => this.validatePreviousHash(block, nextBlock));
   }
+
+  // Validates previous blockHash from next block
+  validatePreviousHash(block, nextBlock) {
+    let blockHash = block.hash;
+    let nextBlockObject = this.getBlockFromString(nextBlock);
+    // compare blocks hash link
+    let previousHash = nextBlockObject.previousBlockHash;
+    if (blockHash !== previousHash) {
+      return Promise.resolve(block.height);
+    }
+    return Promise.resolve(true);
+  }
+
+  // Validates the block
+  getValidateBlockPromise(height) {
+    return this.validateBlock(height);
+  }
+
+  // Validates all the chain
+  validateChain() {
+    return this.getBlockHeight()
+      .then(async (height) => {
+        let promises = [];
+        for (let z = 0; z < height - 1; z++) {
+          let promise = await this.getValidateBlockPromise(z);
+          promises.push(promise);
+        }
+        return Promise.resolve(promises);
+      })
+  }
+
 }
 
-
+//Starts the process for testing the Blockchain
 function start() {
   let b = new Blockchain();
   let count = 0;
   (function (n) {
-    return new Promise((resolve,reject) => {
+    return new Promise((resolve, reject) => {
       let it = setInterval(() => {
         b.addBlock(new Block(`Block #${count + 1}`)).then(b => {
           console.log(b);
@@ -185,16 +191,18 @@ function start() {
             resolve();
           }
         });
-  
+
       }, 100);
     });
-  })(10).then(() =>{
-     b.getValidatePromises().then(promises => {
-       console.log(promises);
-       Promise.all(promises).then(results => {
-         console.log(results);
-       });
-     });
+  })(10).then(() => { // Create 10 blocks
+    b.validateChain().then(promises => { // Starts the validation of the blockchain
+      Promise.all(promises).then(results => {
+       const blockErrors = promises.filter(p => p !== true);
+       console.log(`Blocks with errors: [${blockErrors}]`);
+      });
+    }).catch(e => {
+      console.log('Error:', e);
+    });
   });
 }
 
