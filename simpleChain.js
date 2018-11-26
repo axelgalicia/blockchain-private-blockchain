@@ -134,8 +134,8 @@ class Blockchain {
       block.hash = blockHash;
       return true;
     } else {
-      console.log('Block #' + blockHeight + ' invalid hash:\n' + blockHash + '<>' + validBlockHash);
-      return blockHeight;
+      console.log('Block #' + block.height + ' invalid hash:\n' + blockHash + ' <>  ' + validBlockHash);
+      return block.height;
     }
   }
   // Validate hash link
@@ -197,9 +197,23 @@ function start() {
   })(10).then(() => { // Create 10 blocks
     b.validateChain().then(promises => { // Starts the validation of the blockchain
       Promise.all(promises).then(results => {
-       const blockErrors = promises.filter(p => p !== true);
-       console.log(`Blocks with errors: [${blockErrors}]`);
+        const blockErrors = promises.filter(p => p !== true);
+        console.log(`Blocks with errors: [${blockErrors}]`);
       });
+    }).then(() => {
+      b.getBlock(5).then(block => {
+        let blockObject = JSON.parse(block);
+        blockObject.data = 'Another corrupted data';
+        levelDB.addLevelDBData(5, JSON.stringify(blockObject)).then(result => {
+          //Validate again
+          b.validateChain().then(promises => { // Starts the validation of the blockchain
+            Promise.all(promises).then(results => {
+              const blockErrors = promises.filter(p => p !== true);
+              console.log(`Blocks with errors: [${blockErrors}]`);
+            });
+          });
+        }).catch(() => { });
+      })
     }).catch(e => {
       console.log('Error:', e);
     });
