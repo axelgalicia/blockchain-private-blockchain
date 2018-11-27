@@ -168,7 +168,7 @@ class Blockchain {
     return this.getBlockHeight()
       .then(async (height) => {
         let promises = [];
-        for (let z = 0; z < height - 1; z++) {
+        for (let z = 0; z < height + 1; z++) {
           let promise = await this.getValidateBlockPromise(z);
           promises.push(promise);
         }
@@ -245,9 +245,19 @@ function runTest() {
     console.log(blocks)
     console.log('--------------------------------------')
 
-    //Validate block 3
+    // Validate block 3
     const validation = await bc.validateBlock(3);
-    console.log(`Is block 3 valid: ${true === validation}`)
+    console.log(`Is block #3 valid: ${true === validation}`);
+    console.log('--------------------------------------')
+
+    let chainErrors = await bc.validateChain();
+    console.log(chainErrors)
+    chainErrors = chainErrors.filter(p => p !== true);
+    console.log(`Errors found in chain: ${chainErrors.length}`);
+    console.log(chainErrors);
+    console.log('--------------------------------------')
+
+
 
 
 
