@@ -59,14 +59,16 @@ class Storage {
     // Get count of elements from db
     length() {
       let self = this;
-      let i = 0;
+      let i = -1;
       return new Promise((resolve, reject) => {
         this.db.createReadStream().on('data', function (data) {
+          console.log(i,'---')
           i++;
         }).on('error', function (err) {
           console.log('Unable to read data stream!', err);
           reject(err);
         }).on('close', function () {
+          console.log(i,'****')
           resolve(i);
         });
   
