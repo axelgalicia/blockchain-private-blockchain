@@ -69,17 +69,17 @@ class Blockchain {
 
     let currentHeight = await this.getBlockHeight();
     // Verify genesis block exists
-    if (currentHeight === -1) { 
+    if (currentHeight === -1) {
       console.log('ADDING GENESIS FROM ADDBLOCK');
       const genesisBlock = await storage.addLevelDBData(0, Blockchain.getBlockAsString(Blockchain.createGenesisBlock()));
     }
-    currentHeight = await this.getBlockHeight();
+    currentHeight = await this.getBlockHeight() + 1;
     // Block height
     newBlock.height = currentHeight;
     // UTC timestamp
     newBlock.time = Blockchain.getTimeUTC();
     // previous block hash
-    let previousBlock = await storage.getLevelDBData(currentHeight);
+    let previousBlock = await storage.getLevelDBData(currentHeight - 1);
     // Assign previous block hash
     newBlock.previousBlockHash = Blockchain.getBlockFromString(previousBlock).hash;
     // Block hash with SHA256 using newBlock and converting to a string
@@ -100,8 +100,9 @@ class Blockchain {
   }
 
   // Get block height
-  getBlockHeight() {
-    return storage.length();
+  async getBlockHeight() {
+    const length = await storage.length();
+    return length;
   }
 
   // get block
@@ -240,7 +241,13 @@ function runTest() {
     const block3 = await bc.addBlock(new Block('Block #3'));
     const block4 = await bc.addBlock(new Block('Block #4'));
     const blocks = [block1, block2, block3, block4];
-    console.log(`4 Blocks added: [${blocks}]`);
+    console.log(`4 Blocks added:`);
+    console.log(blocks)
+
+
+    
+  }).catch(e => {
+    console.log(e);
   });
 
 }
