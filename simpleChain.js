@@ -30,6 +30,7 @@ class Blockchain {
     }
   }
 
+  // Call it to initialize the Blockchain object
   static async initBlockchain() {
     const length = await storage.length();
     if (length === -1) {
@@ -116,11 +117,10 @@ class Blockchain {
     const blockString = await this.getBlock(blockHeight);
     const blockObject = Blockchain.getBlockFromString(blockString);
     const validIntegrity = await this.validateBlockIntegrity(blockObject);
-    if (validIntegrity !== true) {
-      return blockHeight;
-    }
-    const validHashLink = await this.validateBlockHashLink(blockObject);
-    return validHashLink;
+    return validIntegrity !== true ? blockHeight : true;
+
+    // const validHashLink = await this.validateBlockHashLink(blockObject);
+    // return validHashLink;
   }
 
   // Validates block integrity
@@ -243,9 +243,15 @@ function runTest() {
     const blocks = [block1, block2, block3, block4];
     console.log(`4 Blocks added:`);
     console.log(blocks)
+    console.log('--------------------------------------')
+
+    //Validate block 3
+    const validation = await bc.validateBlock(3);
+    console.log(`Is block 3 valid: ${true === validation}`)
 
 
-    
+
+
   }).catch(e => {
     console.log(e);
   });
