@@ -111,20 +111,9 @@ class Blockchain {
     return storage.getLevelDBData(blockHeight);
   }
 
-  // validate block - Returns the block heigh if the block is not valid
-  async validateBlock(blockHeight) {
-    // get block object
-    const blockString = await this.getBlock(blockHeight);
-    const blockObject = Blockchain.getBlockFromString(blockString);
-    const validIntegrity = await this.validateBlockIntegrity(blockObject);
-    return validIntegrity !== true ? blockHeight : true;
-
-    // const validHashLink = await this.validateBlockHashLink(blockObject);
-    // return validHashLink;
-  }
 
   // Validates block integrity
-  async validateBlockIntegrity(block) {
+  validateBlockIntegrity(block) {
     // get block hash
     let blockHash = block.hash;
     // remove block hash to test block integrity
@@ -141,91 +130,39 @@ class Blockchain {
     }
   }
   // Validate hash link
-  validateBlockHashLink(block) {
-    return this.getBlock(block.height + 1)
-      .then(nextBlock => this.validatePreviousHash(block, nextBlock));
-  }
-
-  // Validates previous blockHash from next block
-  validatePreviousHash(block, nextBlock) {
-    let blockHash = block.hash;
-    let nextBlockObject = Blockchain.getBlockFromString(nextBlock);
-    // compare blocks hash link
-    let previousHash = nextBlockObject.previousBlockHash;
-    if (blockHash !== previousHash) {
-      return Promise.resolve(block.height);
-    }
-    return Promise.resolve(true);
-  }
-
-  // Validates the block
-  getValidateBlockPromise(height) {
-    return this.validateBlock(height);
+  validateBlockHashLink(block, nextBlock) {
+    return block.hash === nextBlock.previousBlockHash;
   }
 
   // Validates all the chain
   validateChain() {
     return this.getBlockHeight()
       .then(async (height) => {
-        let promises = [];
+        let errors = [];
         for (let z = 0; z < height + 1; z++) {
-          let promise = await this.getValidateBlockPromise(z);
-          promises.push(promise);
+          let blockToValidate = Blockchain.getBlockFromString(await this.getBlock(z));
+          const blockValidation = await this.validateBlockIntegrity(blockToValidate);
+          let hashLinkValidation = true;
+          if (z < height) {
+            let nextBlock = Blockchain.getBlockFromString(await this.getBlock(z));
+            hashLinkValidation = await this.validateBlockHashLink(blockToValidate, nextBlock);
+          }
+          console.log(z,blockValidation, hashLinkValidation )
+          const valid = (blockValidation === true && hashLinkValidation === true);
+          if (!valid) {
+            errors.push(z);
+          }
         }
-        return Promise.resolve(promises);
+        return errors;
       })
   }
 
 }
 
-//Starts the process for testing the Blockchain
-function start() {
-  let b = new Blockchain();
-  let count = 0;
-  (function (n) {
-    return new Promise((resolve, reject) => {
-      let it = setInterval(() => {
-        b.addBlock(new Block(`This is a block created at ${new Date().getTime().toString().slice(0, -3)}`)).then(b => {
-          console.log(b);
-          count++;
-          if (count >= n) {
-            clearInterval(it);
-            resolve();
-          }
-        });
-
-      }, 100);
-    });
-  })(10).then(() => { // Create 10 blocks
-    b.validateChain().then(promises => { // Starts the validation of the blockchain
-      Promise.all(promises).then(results => {
-        const blockErrors = promises.filter(p => p !== true);
-        console.log(`Blocks with errors: [${blockErrors}]`);
-      });
-    }).then(() => {
-      b.getBlock(5).then(block => {
-        let blockObject = JSON.parse(block);
-        blockObject.data = 'Another corrupted data';
-        b.storage.addLevelDBData(5, JSON.stringify(blockObject)).then(result => {
-          //Validate again
-          b.validateChain().then(promises => { // Starts the validation of the blockchain
-            Promise.all(promises).then(results => {
-              const blockErrors = promises.filter(p => p !== true);
-              console.log(`Blocks with errors: [${blockErrors}]`);
-            });
-          });
-        }).catch(() => { });
-      })
-    }).catch(e => {
-      console.log('Error:', e);
-    });
-  });
-}
-
-// Inserts the Genesis block and 10 more blocks
-//start();
 
 
+
+// Testing Blockchain scenarios
 function runTest() {
   Blockchain.initBlockchain().then(async (bc) => {
 
@@ -245,22 +182,29 @@ function runTest() {
     console.log(blocks)
     console.log('--------------------------------------')
 
-    // Validate block 3
-    const validation = await bc.validateBlock(3);
+    // Validate block 3 integrity
+    const validation = await bc.validateBlockIntegrity(JSON.parse(block3));
     console.log(`Is block #3 valid: ${true === validation}`);
     console.log('--------------------------------------')
 
+    // Validate chain before errors
     let chainErrors = await bc.validateChain();
-    console.log(chainErrors)
     chainErrors = chainErrors.filter(p => p !== true);
     console.log(`Errors found in chain: ${chainErrors.length}`);
     console.log(chainErrors);
     console.log('--------------------------------------')
 
+    // Tampering data in the chain
+    let block4Copy = await bc.getBlock(4);
+    block4Copy.previousBlock = '';
+    console.log(block4Copy);
 
-
-
-
+    // Validate chain after error introduced
+    chainErrors = await bc.validateChain();
+    chainErrors = chainErrors.filter(p => p !== true);
+    console.log(`Errors found in chain: ${chainErrors.length}`);
+    console.log(chainErrors);
+    console.log('--------------------------------------')
 
   }).catch(e => {
     console.log(e);
