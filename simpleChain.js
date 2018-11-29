@@ -131,6 +131,7 @@ class Blockchain {
   }
   // Validate hash link
   validateBlockHashLink(block, nextBlock) {
+    console.log(block.hash.slice(0,10), nextBlock.previousBlockHash.slice(0,10));
     return block.hash === nextBlock.previousBlockHash;
   }
 
@@ -144,12 +145,12 @@ class Blockchain {
           const blockValidation = await this.validateBlockIntegrity(blockToValidate);
           let hashLinkValidation = true;
           if (z < height) {
-            let nextBlock = Blockchain.getBlockFromString(await this.getBlock(z));
-            hashLinkValidation = await this.validateBlockHashLink(blockToValidate, nextBlock);
+            let nextBlock = Blockchain.getBlockFromString(await this.getBlock(z + 1));
+            hashLinkValidation = this.validateBlockHashLink(blockToValidate, nextBlock);
           }
           console.log(z,blockValidation, hashLinkValidation )
           const valid = (blockValidation === true && hashLinkValidation === true);
-          if (!valid) {
+          if (!valid && !errors.includes(z)) {
             errors.push(z);
           }
         }
@@ -195,8 +196,9 @@ function runTest() {
     console.log('--------------------------------------')
 
     // Tampering data in the chain
-    let block4Copy = await bc.getBlock(4);
-    block4Copy.previousBlock = '';
+    let block4Copy = Blockchain.getBlockFromString(await bc.getBlock(4));
+    block4Copy.previousBlockHash = 'SOME FAKE HASH';
+    await storage.addLevelDBData(4, Blockchain.getBlockAsString(block4Copy));
     console.log(block4Copy);
 
     // Validate chain after error introduced
