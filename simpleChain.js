@@ -120,19 +120,24 @@ class Blockchain {
     block.hash = '';
     // generate block hash
     let validBlockHash = SHA256(JSON.stringify(block)).toString();
+    block.hash = blockHash;
     // Compare
     if (blockHash === validBlockHash) {
-      block.hash = blockHash;
       return true;
     } else {
-      console.log('Block #' + block.height + ' invalid hash:\n' + blockHash + ' <>  ' + validBlockHash);
-      return block.height;
+      return false;
     }
   }
   // Validate hash link
   validateBlockHashLink(block, nextBlock) {
-    console.log(block.hash.slice(0,10), nextBlock.previousBlockHash.slice(0,10));
-    return block.hash === nextBlock.previousBlockHash;
+    const validLink = block.hash === nextBlock.previousBlockHash;
+    if(validLink) {
+      console.log(`${block.hash.slice(0,10)} <--Hash---[${block.height}]--✓--[${nextBlock.height}]--Previous hash---> ${nextBlock.previousBlockHash.slice(0,10)}`);
+    } else {
+      console.log(`${block.hash.slice(0,10)} <--Hash---[${block.height}]--X--[${nextBlock.height}]--Previous hash---> ${nextBlock.previousBlockHash.slice(0,10)}`);
+    }
+    
+    return validLink;
   }
 
   // Validates all the chain
@@ -145,13 +150,14 @@ class Blockchain {
           const blockValidation = await this.validateBlockIntegrity(blockToValidate);
           let hashLinkValidation = true;
           if (z < height) {
+            if(z === 4) console.log(blockToValidate);
             let nextBlock = Blockchain.getBlockFromString(await this.getBlock(z + 1));
             hashLinkValidation = this.validateBlockHashLink(blockToValidate, nextBlock);
           }
-          console.log(z,blockValidation, hashLinkValidation )
           const valid = (blockValidation === true && hashLinkValidation === true);
           if (!valid && !errors.includes(z)) {
-            errors.push(z);
+            const errorBlock = blockValidation === true && hashLinkValidation === false ? z + 1: z;
+            errors.push(errorBlock);
           }
         }
         return errors;
@@ -168,25 +174,30 @@ function runTest() {
   Blockchain.initBlockchain().then(async (bc) => {
 
     // Current Height
-    const currentBlockHeigh = await bc.getBlockHeight();
-    console.log('--------------------------------------')
-    console.log(`Current height: ${currentBlockHeigh}`);
+    let currentBlockHeigh = await bc.getBlockHeight();
+
 
     console.log('--------------------------------------')
+    console.log(`Current height: ${currentBlockHeigh}`);
+    console.log('--------------------------------------')
     // Adding 4 blocks
-    const block1 = await bc.addBlock(new Block('Block #1'));
-    const block2 = await bc.addBlock(new Block('Block #2'));
-    const block3 = await bc.addBlock(new Block('Block #3'));
-    const block4 = await bc.addBlock(new Block('Block #4'));
+    const block1 = await bc.addBlock(new Block(`Block #${++currentBlockHeigh}`));
+    const block2 = await bc.addBlock(new Block(`Block #${++currentBlockHeigh}`));
+    const block3 = await bc.addBlock(new Block(`Block #${++currentBlockHeigh}`));
+    const block4 = await bc.addBlock(new Block(`Block #${++currentBlockHeigh}`));
     const blocks = [block1, block2, block3, block4];
     console.log(`4 Blocks added:`);
     console.log(blocks)
     console.log('--------------------------------------')
 
+
+
     // Validate block 3 integrity
     const validation = await bc.validateBlockIntegrity(JSON.parse(block3));
     console.log(`Is block #3 valid: ${true === validation}`);
     console.log('--------------------------------------')
+
+
 
     // Validate chain before errors
     let chainErrors = await bc.validateChain();
@@ -199,14 +210,14 @@ function runTest() {
     let block4Copy = Blockchain.getBlockFromString(await bc.getBlock(4));
     block4Copy.previousBlockHash = 'SOME FAKE HASH';
     await storage.addLevelDBData(4, Blockchain.getBlockAsString(block4Copy));
-    console.log(block4Copy);
 
+    console.log('-----------------AFTER TAMPERING Block 4---------------')
     // Validate chain after error introduced
     chainErrors = await bc.validateChain();
     chainErrors = chainErrors.filter(p => p !== true);
     console.log(`Errors found in chain: ${chainErrors.length}`);
     console.log(chainErrors);
-    console.log('--------------------------------------')
+    console.log('------------------------------------------------------');
 
   }).catch(e => {
     console.log(e);
