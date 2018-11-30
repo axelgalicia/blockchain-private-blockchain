@@ -17,9 +17,9 @@ This is an example of how to create a very basic **private blockchain** using Ja
 node simpleChain.js
 ```
 
-You will see the output in the console for the blocks that are created, by default there are 4 blocks being created.
+You will see the output in the console for the blocks that are created, by default there are **4** blocks being created.
 
-The chain is being validated and then error is introduced and validated again showing the errors.
+The chain is being validated and then error is introduced and validated again, showing the errors at the end.
 
 ## Screnshots
 
@@ -27,7 +27,7 @@ The chain is being validated and then error is introduced and validated again sh
 
 ## Using the library
 
-To start a new blockchain please call the initBlockchain function directly on a Blockchain object. e.g.
+To start a new blockchain please call the **initBlockchain** function directly on a Blockchain object. e.g.
 
 ```
   Blockchain.initBlockchain().then(async (bc) => {
@@ -36,7 +36,7 @@ To start a new blockchain please call the initBlockchain function directly on a 
   }
 ```
 
-The bc parameter will contain a new Blockchain object ready to start calling async functions like:
+The **bc** parameter will contain a **new** Blockchain object ready to start calling **async** functions like:
 
 ```
 
