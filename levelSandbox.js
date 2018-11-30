@@ -31,7 +31,6 @@ class Storage {
              reject();
            };
         resolve(value);
-        //console.log('Value = ' + value);
       })
     });
   }
@@ -46,7 +45,6 @@ class Storage {
         console.log('Unable to read data stream!', err);
         reject(err);
       }).on('close', function () {
-        console.log('Block #' + i);
         self.addLevelDBData(i, value);
         resolve(value);
       });

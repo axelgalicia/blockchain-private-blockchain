@@ -1,6 +1,6 @@
 # Private Blockchain
 
-This is an example of how to create a very basic private blockchain using Javascript and LevelDB to keep the blocks stored in the disk.
+This is an example of how to create a very basic **private blockchain** using Javascript and **LevelDB** to keep the blocks stored in the disk.
 
 ## Installation
 
@@ -17,17 +17,50 @@ This is an example of how to create a very basic private blockchain using Javasc
 node simpleChain.js
 ```
 
-You will see the output in the console for the blocks that are created, by default there are 10 blocks being created.
+You will see the output in the console for the blocks that are created, by default there are 4 blocks being created.
 
 The chain is being validated and then error is introduced and validated again showing the errors.
 
 ## Screnshots
 
-![Blocks created](https://github.com/axelgalicia/blockchain-private-blockchain/blob/master/images/screenshot1.jpg)
+![Blocks created and validated](https://github.com/axelgalicia/blockchain-private-blockchain/blob/master/images/screenshot1.jpg)
 
-### After adding error in block 5
+## Using the library
 
-![Blocks with errors](https://github.com/axelgalicia/blockchain-private-blockchain/blob/master/images/errors.jpg)
+To start a new blockchain please call the initBlockchain function directly on a Blockchain object. e.g.
+
+```
+  Blockchain.initBlockchain().then(async (bc) => {
+    // Current Height
+    let currentBlockHeigh = await bc.getBlockHeight();
+  }
+```
+
+The bc parameter will contain a new Blockchain object ready to start calling async functions like:
+
+```
+
+Blockchain.initBlockchain().then(async (bc) => {
+
+// Getting the current height of the blockchain
+const height = await bc.getBlockHeight();
+
+// Adding a new block
+const block1 = await bc.addBlock(new Block(`Block example}`));
+
+// Validate chain
+const chainErrors = await bc.validateChain();
+
+...
+
+}
+
+```
+
+
+## Storage
+
+The blockchain will be saved by default in a folder called **privatechain** located inside the folder where the application is being run.
 
 
 **Author**: Axel Galicia, axelgalicia@gmail.com
